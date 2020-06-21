@@ -1,0 +1,35 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+  boxes = [
+    { :name => "selinux-8", :box => "centos/8", :nw => "10" },
+    { :name => "selinux-7", :box => "centos/7", :nw => "20" },
+    #{ :name => "client-centos7", :box => "centos/7", :nw => "30" },
+    #{ :name => "client-centos8", :box => "centos/8", :nw => "40" },
+  ]
+  boxes.each do |opts|
+    config.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+    config.vm.define opts[:name] do |config|
+      config.vm.box = opts[:box]
+      config.vm.hostname = opts[:name]
+      config.vm.network :private_network, ip: "192.168.10.#{opts[:nw]}"
+      config.vm.network :private_network, ip: "192.168.20.#{opts[:nw]}"
+      if opts[:name] == boxes.last[:name]
+        config.vm.provision "ansible" do |ansible|
+          ansible.compatibility_mode = "2.0"
+          ansible.playbook = "test.yml"
+          ansible.limit = "all"
+          ansible.raw_arguments = ['--diff'] #, '-vvv']
+        end
+      end
+    end
+  end
+end

@@ -1,0 +1,31 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    policy_files:
+      - test
+
+  roles:
+    - ../../.
+
+  tasks:
+  - name: install httpd
+    yum:
+      name:
+        - httpd
+      state: latest
+    register: enable_httpd
+
+  - name: listen to some odd port
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      regexp: "^Listen 80"
+      line: "Listen 23"
+    notify:
+      - enable_httpd
+
+  handlers:
+  - name: enable_httpd
+    systemd:
+      name: httpd
+      state: started
