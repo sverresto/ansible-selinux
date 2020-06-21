@@ -52,6 +52,17 @@ EOF
     - ansible-selinux
 ```
 
+How to create a .te file
+------------------------
+
+List denied actions:
+
+```bash
+grep avc /var/log/audit/audit.log
+
+echo "<denied action>" | audit2allow -M -o <name of action>
+```
+
 License
 -------
 
