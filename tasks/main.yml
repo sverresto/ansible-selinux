@@ -42,11 +42,6 @@
     - "{{ policy_files }}"
   register: custom_policies_output
 
-- name: debug
-  debug:
-    var: "{{ item.item }}"
-  with_items: "{{ custom_policies_output.results }}"
-
 - name: Build and reload custom selinux policy files
   shell: |
     checkmodule -M -m -o {{ item.item }}.mod {{ item.item }}.te
