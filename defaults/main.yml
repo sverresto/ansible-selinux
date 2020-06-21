@@ -1,0 +1,6 @@
+---
+# defaults file for ansible-selinux
+
+custom_selinux_dir: /etc/selinux_custom
+policy_files: []
+enforce_selinux: true

@@ -1,0 +1,58 @@
+---
+# tasks file for ansible-selinux
+
+- name: check if we're running supported os
+  assert:
+    fail_msg: "{{ role_name }} only supports CentOS versions 7 and 8!"
+    success_msg: "{{ role_name }} supports {{ ansible_distribution }} version {{ ansible_distribution_version }}"
+    quiet: "{{ not ansible_check_mode }}"
+    that:
+      ( ansible_distribution|lower == "centos" and ansible_distribution_major_version|int in [7,8] )
+
+- name: include variables for os
+  include_vars: "{{ ansible_distribution|lower }}{{ ansible_distribution_major_version }}.yml"
+
+- name: install selinux deps
+  yum:
+    name:
+      - policycoreutils
+      - "{{ python_libselinux }}"
+      - "{{ python_policycoreutils }}"
+    state: latest
+    
+- name: Ensuring selinux is enforced
+  selinux:
+    policy: targeted
+    state: enforcing
+  when: enforce_selinux
+  
+- name: Creating selinux custom policy drop folder
+  file:
+    path: "{{ custom_selinux_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0750
+
+- name: Distributing custom selinux policies
+  copy:
+    src: "{{ item }}.te"
+    dest: "{{ custom_selinux_dir}}/{{ item }}.te"
+  with_items:
+    - "{{ policy_files }}"
+  register: custom_policies_output
+
+- name: debug
+  debug:
+    var: "{{ item.item }}"
+  with_items: "{{ custom_policies_output.results }}"
+
+- name: Build and reload custom selinux policy files
+  shell: |
+    checkmodule -M -m -o {{ item.item }}.mod {{ item.item }}.te
+    semodule_package -o {{ item.item }}.pp -m {{ item.item }}.mod 
+    /usr/sbin/semodule -u {{custom_selinux_dir}}/{{ item.item }}.pp
+  args:
+    chdir: "{{ custom_selinux_dir }}"
+  with_items: "{{ custom_policies_output.results }}"
+  when: item.changed
